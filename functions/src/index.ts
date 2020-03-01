@@ -6,8 +6,7 @@ admin.initializeApp();
 
 const db = admin.firestore();
 
-const homefry = 'sk_test_VmoZXPZM8V2x5rVsQh7xOGK100Fzr8wMiY';
-const sk = homefry;
+const stripe = new Stripe(functions.config().stripe.homefry);
 
 // Interfaces
 
@@ -203,11 +202,13 @@ async (p, c) => { try {
     if(!p.source || !p.source.id)
     throw { msg: 'No card data available'};
     
-    const stripe = new Stripe(sk);
+    // 
     
     const user: any = (p.customerId)?{...c.auth,...p}:await userDoc(c.auth.uid);
     
-    let card: any = await stripe.customers.createSource(
+    let card: any = 
+    
+    await stripe.customers.createSource(
         user.customerId,
         {source: p.source.id}
     )
@@ -242,7 +243,7 @@ async (p, c) => { try {
     const user: any = await userDoc(c.auth.uid);
     if(!user) throw { msg: 'No record for this user...'};
     
-    const stripe = new Stripe(sk);
+    
 
     const status = await stripe.customers.deleteSource(
         user.customerId,
@@ -289,62 +290,72 @@ async (p, c) => { try {
 
 
 
-// export const userChargeCreate = functions.https.onCall(
-//     async (p, c) => {
-        
-//         const stripe = new Stripe(sk);
+export const userChargeCreate = functions.https.onCall(
+    async (p, c) => {
+        if(!c.auth || !c.auth.uid)
+        throw { msg: 'Please re-authenticate.'};
+        const user: any = await userDoc(c.auth.uid);
+        if(!user) throw { msg: 'No record for this user...'};
 
-//         const amount = p.amount || p.total;
-//         const currency = p.currency || null;
-//         const source = p.user.source;
-//         const accountID = p.seller.accountID;
-//         // const capture = p.accepted;
+        const amount = p.amount || p.total;
+        const currency = p.currency || 'usd';
+        const customer = user.customerId;
+        const source = user.source;
+        const accountId = "acct_1FPAyTHJfaumqsIl";//p.seller.accountId;
+        // const transfer_group = db.collection("tmp").doc().id;
+        // const capture = p.accepted;
+        
+        const fee = Math.floor(0.075 * amount) + 50;
+        
+        if(amount < 1000)
+        throw {
+            msg: 'Amount is too low to complete order.'
+        };
+        if(!source) 
+        throw {
+            msg: 'Please add a card to process payment.'
+        };
+        
+        const charge = await stripe.paymentIntents.create({
+            customer: customer,
+            amount: amount,
+            currency: currency || "usd",
+            payment_method: source,
+            application_fee_amount: fee,
+            on_behalf_of: accountId,
+            transfer_data: {
+                destination: accountId
+            },
+            // capture: capture || false
+        })
 
-//         // await db.doc(`users/${p.user.uid}`).get()
-        
-//         const fee = Math.floor(0.075 * amount) + 50;
-        
-//         if(amount < 1000)
-//         throw {
-//             msg: 'Amount is too low to complete order'
-//         };
-        
-//         const charge = await stripe.charges.create({
-//             amount: amount,
-//             currency: currency || "usd",
-//             source: source,
-//             application_fee_amount: fee,
-//             // capture: capture || false
-//         }, {
-//             stripe_account: accountID,
-//         })
-
-//         if(!charge.status || charge.status !== 'succeeded')
-//         throw {
-//             msg: 'Charge did not go through.'
-//         }
+        if(!charge.status)
+        throw {
+            msg: 'Charge did not go through.'
+        }
             
-//         const order = {
-//             charge: prim(charge), 
-//             ...p
-//         };
+        const order = {
+            charge: prim(charge),
+            ...p
+        };
 
-//         await db.collection('orders').add(order);
+        await db.collection('orders').add(order);
 
-//         // Notification content
-//         const payload = {
-//             notification: {
-//                 title: 'Preparing Order',
-//                 body: `${p.seller.name} has recieved your order.`,
-//                 sound: 'default'
-//             } 
-//         };
-        
-//         await admin.messaging().sendToDevice(p.user.token, payload);
+        if(user.token && user.token != ""){
+            // Notification content
+            const payload = {
+                notification: {
+                    title: 'Preparing Order',
+                    body: `${p.seller.name} has recieved your order.`,
+                    sound: 'default'
+                } 
+            };
+            await admin.messaging().sendToDevice(user.token, payload);
+        }
 
-//         return order;
-//     }
-// );
+        return order;
+    }
+);
 
 
 
@@ -387,11 +398,10 @@ async (p, c) => {
     throw { msg: 'Please re-authenticate.'};
     // return p;
     const k: any = p; k.address = {};
-    k.email = 'felix.o.stack@gmail.com';
     k.uid = c.auth.uid;
     let ki = await docGet(`kitchens/${k.uid}`);
     if(ki.exists) return ki.data();
-    k.accountId = await accountId(k);
+    k.accountId = await accountId(k, c.rawRequest.ip);
     // return add('kitchens', k);
     return docSet(`kitchens/${k.uid}`, k)
 });
@@ -457,7 +467,7 @@ async (p, c) => {
 //         if(!c.auth || !c.auth.uid)
 //         throw { msg: 'Please re-authenticate.'};
         
-//         const stripe = new Stripe(sk);
+//         
         
 //         const kid = p.kid || p.id;
         
@@ -494,7 +504,7 @@ async (p, c) => {
 //         if(!c.auth || !c.auth.uid)
 //         throw { msg: 'Please re-authenticate.'};
         
-//         const stripe = new Stripe(sk);
+//         
 
 //         const kid = p.kid || p.id;
 //         const eA = await stripe.accounts.updateExternalAccount(
@@ -568,13 +578,13 @@ async (p, c) => {
 
 
 
-// export const itemDelete = functions.https.onCall(
-// async (p, c) => {
-//     if(!c.auth)
-//     throw { msg: 'Please re-authenticate.'};
-//     const id: any = p.iid || p.id || p;
-//     return del(`kitchens/${p.kid}/items`, id);    
-// });
+export const itemDelete = functions.https.onCall(
+async (p, c) => {
+    if(!c.auth)
+    throw { msg: 'Please re-authenticate.'};
+    const id: any = p.iid || p.id || p;
+    return del(`kitchens/${p.kid}/items`, id);    
+});
 
 
 
@@ -789,18 +799,43 @@ const userAdd = (d:string, data:any) => {
 
 
 
-const accountId = async (k: any) => {
-        
-    const stripe = new Stripe(sk);
+const accountId = async (k: any, ip?: any) => {
 
     const account = await stripe.accounts.create({
         type: 'custom',
         country: k.address.country || 'US',
-        email: k.email,
+        ...(k.email)?{email: k.email}:null,
         requested_capabilities: [
             'card_payments',
-            'transfers',
+            'transfers'
         ],
+        ...(k.business_type)?{
+            business_type: k.business_type
+        }:null,
+        ...(k.business_type == "individual")?{ individual: {
+            first_name: k.name,
+            last_name: k.last_name,
+            address: k.address,
+            dob: k.dob,
+            email: k.email,
+            phone: k.phone,
+            ssn_last_4: k.ssn_last_4,
+            verification: k.verification
+        } }:null,
+        ...(k.business_type == "company")?{ company: {
+            name: k.name,
+            address: k.address,
+            directors_provided: false,
+            owners_provided: k.owners_provided,
+            phone: k.phone,
+            tax_id: k.tax_id,
+            tax_id_registrar: k.tax_id_registrar,
+            vat_id: k.vat_id
+        } }:null,
+        ...(ip)?{ tos_acceptance: {
+          date: Math.floor(Date.now() / 1000),
+          ip: ip // Assumes you're not using a proxy
+        } }:null
     })
     return account.id
 }
@@ -815,7 +850,7 @@ const accountId = async (k: any) => {
 
 
 const createCustomer = async (user: User) => {
-    const stripe = new Stripe(sk);
+    
     const customer = await stripe.customers.create({
         email: user.email,
         metadata: {uid: user.uid} 
@@ -833,7 +868,7 @@ const createCustomer = async (user: User) => {
 
 
 const deleteCustomer = (cid: string) => {        
-    const stripe = new Stripe(sk);
+    
     return stripe.customers.del(cid);
 }
 
@@ -847,7 +882,7 @@ const deleteCustomer = (cid: string) => {
 
 
 const sourceList = async (cid: string) => {
-    const stripe = new Stripe(sk);
+    
     return await stripe.customers.listSources(
         cid,
         {object: 'source'}
@@ -897,14 +932,14 @@ const noNull = (obj: any) => {
 
 
 
-// const prim = (obj: any) => {
-//     const newObj: any = {};
+const prim = (obj: any) => {
+    const newObj: any = {};
   
-//     Object.keys(obj).forEach(key => {
-//       if (obj[key] && typeof obj[key] !== "object" && obj[key] !== null) {
-//         newObj[key] = obj[key]; // copy value
-//       }
-//     });
+    Object.keys(obj).forEach(key => {
+      if (obj[key] && typeof obj[key] !== "object" && obj[key] !== null) {
+        newObj[key] = obj[key]; // copy value
+      }
+    });
   
-//     return newObj;
-// };
+    return newObj;
+};
