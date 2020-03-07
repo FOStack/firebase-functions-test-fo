@@ -24,14 +24,22 @@ interface User {
     uid: string;
 }
 
-// interface Kitchen {
-//     accountId?: string;
-//     address?: any;
-//     disabled?: boolean;
-//     displayName?: string;
-//     photoURL?: string;
-//     uid?: string;
-// }
+export interface Kitchen {
+    accountId?: string;
+    address?: {};
+    createdAt?: string;
+    disabled?: boolean;
+    name?: string;
+    email?: string;
+    emailVerified?: boolean;
+    entitySet?: boolean;
+    id?: string;
+    kid?: string;
+    payoutSet?: boolean;
+    photoURL?: string;
+    service?: {};
+    uid?: string;
+}
 
 
 
@@ -127,7 +135,6 @@ export const userCreate = functions.auth.user().onCreate(
             const user: User = userObject(event);
             user.customerId = await createCustomer(user)
             return userAdd(user.uid, user)
-            // return update('users', user.uid, user);
         } catch(e) {
             throw {msg: 'User creation unsuccessful.'}
         }
@@ -166,8 +173,8 @@ export const userDelete = functions.auth.user().onDelete(
     async (event) => {
         try {
             const user: any = await userDoc(event.uid);
-            const status = await del('users', event.uid);
             await deleteCustomer(user.customerId);
+            const status = await del('users', event.uid);
             return status;
         } catch(e) {
             throw {msg: 'User deletion unsuccessful.'};
@@ -417,8 +424,42 @@ async (p, c) => {
 
 export const kitchenUpdate = functions.https.onCall(
 async (p, c) => {
+    if(!c.auth)
+    throw { msg: 'Please re-authenticate.'};
     const id: any = p.kid || p.id;
     return update('kitchens', id, p);
+});
+
+
+
+
+
+
+
+
+
+
+export const kitchenAccountRetrieve = functions.https.onCall(
+async (p, c) => {
+    if(!c.auth)
+    throw { msg: 'Please re-authenticate.'};
+    return await stripe.accounts.retrieve(p.id||p.accountId||p);
+});
+
+
+
+
+
+
+
+
+
+
+export const kitchenAccountUpdate = functions.https.onCall(
+async (p, c) => {
+    if(!c.auth)
+    throw { msg: 'Please re-authenticate.'};
+    return await stripe.accounts.update(p.id, p.data);
 });
 
 
@@ -833,8 +874,8 @@ const accountId = async (k: any, ip?: any) => {
             vat_id: k.vat_id
         } }:null,
         ...(ip)?{ tos_acceptance: {
-          date: Math.floor(Date.now() / 1000),
-          ip: ip // Assumes you're not using a proxy
+            date: Math.floor(Date.now() / 1000),
+            ip: ip // Assumes you're not using a proxy
         } }:null
     })
     return account.id
