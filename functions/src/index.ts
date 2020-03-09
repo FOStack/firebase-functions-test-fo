@@ -1,10 +1,14 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as Stripe from 'stripe';
+import * as path from 'path';
+import * as os from 'os';
+import * as fs from 'fs';
 
 admin.initializeApp();
 
 const db = admin.firestore();
+const storage = admin.storage();
 
 const stripe = new Stripe(functions.config().stripe.homefry);
 
@@ -32,7 +36,8 @@ export interface Kitchen {
     name?: string;
     email?: string;
     emailVerified?: boolean;
-    entitySet?: boolean;
+    identityProven?: boolean;
+    identitySet?: boolean;
     id?: string;
     kid?: string;
     payoutSet?: boolean;
@@ -133,7 +138,7 @@ export const userCreate = functions.auth.user().onCreate(
     async (event) => {
         try {
             const user: User = userObject(event);
-            user.customerId = await createCustomer(user)
+            user.customerId = await stripeCustomerCreatedId(user)
             return userAdd(user.uid, user)
         } catch(e) {
             throw {msg: 'User creation unsuccessful.'}
@@ -173,7 +178,7 @@ export const userDelete = functions.auth.user().onDelete(
     async (event) => {
         try {
             const user: any = await userDoc(event.uid);
-            await deleteCustomer(user.customerId);
+            await stripeCustomerDelete(user.customerId);
             const status = await del('users', event.uid);
             return status;
         } catch(e) {
@@ -226,7 +231,7 @@ async (p, c) => { try {
 
     const list = {
         card: {...card, primary: p.primary || null }|| null,
-        ...await sourceList(user.customerId)
+        ...await stripeCustomersListSources(user.customerId)
     };
 
     return list;
@@ -259,7 +264,7 @@ async (p, c) => { try {
 
     const list = {
         status: status || null,
-        ...await sourceList(user.customerId)
+        ...await stripeCustomersListSources(user.customerId)
     };
 
     return list;
@@ -283,7 +288,7 @@ async (p, c) => { try {
     const user: any = await userDoc(c.auth.uid);
     if(!user) throw { msg: 'No record for this user...'};
 
-    const list = await sourceList(user.customerId);
+    const list = await stripeCustomersListSources(user.customerId);
 
     return list;
 } catch (e) { throw e; }})
@@ -308,7 +313,8 @@ export const userChargeCreate = functions.https.onCall(
         const currency = p.currency || 'usd';
         const customer = user.customerId;
         const source = user.source;
-        const accountId = "acct_1FPAyTHJfaumqsIl";//p.seller.accountId;
+        const accountId = /**"acct_1FPAyTHJfaumqsIl";//*/p.seller.accountId;
+        
         // const transfer_group = db.collection("tmp").doc().id;
         // const capture = p.accepted;
         
@@ -408,7 +414,7 @@ async (p, c) => {
     k.uid = c.auth.uid;
     let ki = await docGet(`kitchens/${k.uid}`);
     if(ki.exists) return ki.data();
-    k.accountId = await accountId(k, c.rawRequest.ip);
+    k.accountId = await stripeAccountCreatedId(k, c.rawRequest.ip);
     // return add('kitchens', k);
     return docSet(`kitchens/${k.uid}`, k)
 });
@@ -459,8 +465,36 @@ export const kitchenAccountUpdate = functions.https.onCall(
 async (p, c) => {
     if(!c.auth)
     throw { msg: 'Please re-authenticate.'};
+    p.data.individual.verification = undefined;
     return await stripe.accounts.update(p.id, p.data);
 });
+
+
+
+
+
+
+
+
+
+
+export const kitchenAccountIdentityDocuments = functions.storage.bucket('ts-felixo-verification').object().onFinalize(
+async (object) => {
+    const contentType = object.contentType || '';
+    if (!contentType.startsWith('image/')) {
+        return console.log('This is not an image.');
+    }
+    const filePath = object.name || '';
+    // const meta = object.metadata || {};
+    const d = {
+        name: path.basename(filePath) || '',
+        path: filePath,
+        purpose: 'identity_document',
+        bucket: 'ts-felixo-verification'
+    };
+    const file = await stripeFileCreatedId(d)
+    console.log(file)
+})
 
 
 
@@ -840,7 +874,7 @@ const userAdd = (d:string, data:any) => {
 
 
 
-const accountId = async (k: any, ip?: any) => {
+const stripeAccountCreatedId = async (k: any, ip?: any) => {
 
     const account = await stripe.accounts.create({
         type: 'custom',
@@ -890,7 +924,42 @@ const accountId = async (k: any, ip?: any) => {
 
 
 
-const createCustomer = async (user: User) => {
+const stripeFileCreatedId = async (d: any) => {
+
+    const tempFilePath = path.join(os.tmpdir(), d.name);
+    
+    await storage.bucket(d.b||d.bucket||null)
+    .file(d.path||d.filePath)
+    .download({
+        destination: tempFilePath
+    });
+
+    let data = fs.readFileSync(tempFilePath);
+
+    let file = await stripe.files.create({
+        file: {
+            data: data,
+            name: d.name,
+            type: 'application/octet-stream'
+        },
+        purpose: d.purpose
+    });
+
+    fs.unlinkSync(tempFilePath);
+    
+    return file.id;
+}
+
+
+
+
+
+
+
+
+
+
+const stripeCustomerCreatedId = async (user: User) => {
     
     const customer = await stripe.customers.create({
         email: user.email,
@@ -908,7 +977,7 @@ const createCustomer = async (user: User) => {
 
 
 
-const deleteCustomer = (cid: string) => {        
+const stripeCustomerDelete = (cid: string) => {        
     
     return stripe.customers.del(cid);
 }
@@ -922,7 +991,7 @@ const deleteCustomer = (cid: string) => {
 
 
 
-const sourceList = async (cid: string) => {
+const stripeCustomersListSources = async (cid: string) => {
     
     return await stripe.customers.listSources(
         cid,
@@ -984,3 +1053,36 @@ const prim = (obj: any) => {
   
     return newObj;
 };
+
+
+
+
+
+
+
+
+
+
+////////// SNIPPETS ///////////
+
+
+    // let d = p.data.individual.verification.document;
+    // if(!(d.front.includes("file_"))){
+    //     p.data.individual.verification.document.front = await stripeFileCreatedId({
+    //         data: d.front,
+    //         name: 'front.jpg',
+    //         purpose: 'identity_document'
+    //     })
+    // }
+    // if(!(d.back.includes("file_"))){
+    //     p.data.individual.verification.document.back = await stripeFileCreatedId({
+    //         data: d.back,
+    //         name: 'back.jpg',
+    //         purpose: 'identity_document'
+    //     })
+    // }
+
+    
+    // identitySet: event.identitySet || false,
+    // identityProven: event.identityProven || false,
+    // payoutSet: event.payoutSet || false,
