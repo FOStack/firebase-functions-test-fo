@@ -36,8 +36,8 @@ export interface Kitchen {
     name?: string;
     email?: string;
     emailVerified?: boolean;
-    identityProven?: boolean;
     identitySet?: boolean;
+    identityVerified?: boolean;
     id?: string;
     kid?: string;
     payoutSet?: boolean;
@@ -481,19 +481,25 @@ async (p, c) => {
 export const kitchenAccountIdentityDocuments = functions.storage.bucket('ts-felixo-verification').object().onFinalize(
 async (object) => {
     const contentType = object.contentType || '';
+
     if (!contentType.startsWith('image/')) {
         return console.log('This is not an image.');
     }
+
     const filePath = object.name || '';
-    // const meta = object.metadata || {};
+
+    // const meta = object.metadata || {}; // Get AccountId...
+
     const d = {
         name: path.basename(filePath) || '',
         path: filePath,
         purpose: 'identity_document',
         bucket: 'ts-felixo-verification'
     };
+
     const file = await stripeFileCreatedId(d)
-    console.log(file)
+
+    console.log(file) // Add update impl...
 })
 
 
@@ -1066,23 +1072,23 @@ const prim = (obj: any) => {
 ////////// SNIPPETS ///////////
 
 
-    // let d = p.data.individual.verification.document;
-    // if(!(d.front.includes("file_"))){
-    //     p.data.individual.verification.document.front = await stripeFileCreatedId({
-    //         data: d.front,
-    //         name: 'front.jpg',
-    //         purpose: 'identity_document'
-    //     })
-    // }
-    // if(!(d.back.includes("file_"))){
-    //     p.data.individual.verification.document.back = await stripeFileCreatedId({
-    //         data: d.back,
-    //         name: 'back.jpg',
-    //         purpose: 'identity_document'
-    //     })
-    // }
+// let d = p.data.individual.verification.document;
+// if(!(d.front.includes("file_"))){
+//     p.data.individual.verification.document.front = await stripeFileCreatedId({
+//         data: d.front,
+//         name: 'front.jpg',
+//         purpose: 'identity_document'
+//     })
+// }
+// if(!(d.back.includes("file_"))){
+//     p.data.individual.verification.document.back = await stripeFileCreatedId({
+//         data: d.back,
+//         name: 'back.jpg',
+//         purpose: 'identity_document'
+//     })
+// }
 
-    
-    // identitySet: event.identitySet || false,
-    // identityProven: event.identityProven || false,
-    // payoutSet: event.payoutSet || false,
+
+// identitySet: event.identitySet || false,
+// identityVerified: event.identityVerified || false,
+// payoutSet: event.payoutSet || false,
