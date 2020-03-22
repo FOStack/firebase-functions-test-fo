@@ -1,15 +1,15 @@
 import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
-import * as Stripe from 'stripe';
+
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 
+import * as admin from 'firebase-admin';
 admin.initializeApp();
-
 const db = admin.firestore();
 const storage = admin.storage();
 
+import * as Stripe from 'stripe';
 const stripe = new Stripe(functions.config().stripe.homefry);
 
 // Interfaces
@@ -113,9 +113,6 @@ export const appHomefry = functions.https.onCall(
 //         };
 //     }
 // );
-
-
-
 
 
 
@@ -313,7 +310,7 @@ export const userChargeCreate = functions.https.onCall(
         const currency = p.currency || 'usd';
         const customer = user.customerId;
         const source = user.source;
-        const accountId = /**"acct_1FPAyTHJfaumqsIl";//*/p.seller.accountId;
+        const accountId = /**/p.seller.accountId;//*/"acct_1FPAyTHJfaumqsIl";
         
         // const transfer_group = db.collection("tmp").doc().id;
         // const capture = p.accepted;
@@ -384,364 +381,6 @@ export const userChargeCreate = functions.https.onCall(
 //         return p;
 //     }
 // );
-
-
-
-
-
-
-
-
-
-
-///// KITCHENS /////
-
-
-
-
-
-
-
-
-
-
-export const kitchenCreate = functions.https.onCall(
-async (p, c) => {
-    if(!c.auth)
-    throw { msg: 'Please re-authenticate.'};
-    // return p;
-    const k: any = p; k.address = {};
-    k.uid = c.auth.uid;
-    let ki = await docGet(`kitchens/${k.uid}`);
-    if(ki.exists) return ki.data();
-    k.accountId = await stripeAccountCreatedId(k, c.rawRequest.ip);
-    // return add('kitchens', k);
-    return docSet(`kitchens/${k.uid}`, k)
-});
-
-
-
-
-
-
-
-
-
-
-export const kitchenUpdate = functions.https.onCall(
-async (p, c) => {
-    if(!c.auth)
-    throw { msg: 'Please re-authenticate.'};
-    const id: any = p.kid || p.id;
-    return update('kitchens', id, p);
-});
-
-
-
-
-
-
-
-
-
-
-export const kitchenAccountRetrieve = functions.https.onCall(
-async (p, c) => {
-    if(!c.auth)
-    throw { msg: 'Please re-authenticate.'};
-    return await stripe.accounts.retrieve(p.id||p.accountId||p);
-});
-
-
-
-
-
-
-
-
-
-
-export const kitchenAccountUpdate = functions.https.onCall(
-async (p, c) => {
-    if(!c.auth)
-    throw { msg: 'Please re-authenticate.'};
-    p.data.individual.verification = undefined;
-    return await stripe.accounts.update(p.id, p.data);
-});
-
-
-
-
-
-
-
-
-
-
-export const kitchenAccountIdentityDocuments = functions.storage.bucket('ts-felixo-verification').object().onFinalize(
-async (object) => {
-    const contentType = object.contentType || '';
-
-    if (!contentType.startsWith('image/')) {
-        return console.log('This is not an image.');
-    }
-
-    const filePath = object.name || '';
-
-    // const meta = object.metadata || {}; // Get AccountId...
-
-    const d = {
-        name: path.basename(filePath) || '',
-        path: filePath,
-        purpose: 'identity_document',
-        bucket: 'ts-felixo-verification'
-    };
-
-    const file = await stripeFileCreatedId(d)
-
-    console.log(file) // Add update impl...
-})
-
-
-
-
-
-
-
-
-
-
-// export const kitchenDelete = functions.https.onCall(
-// async (p, c) => {
-//     const id: any = p.kid || p.id || p;
-//     return del('kitchens', id);    
-// });
-
-
-
-
-
-
-
-
-
-
-// export const kitchenRecords = functions.https.onCall(
-// async (p, c) => {
-//     const id: any = p.kid || p.id;
-//     stripe.accounts.retrieve(p.accountId,)
-//     return update('kitchens', id, p);    
-// });
-
-
-
-
-
-
-
-
-
-
-// export const kitchenExternalAccountAdd = functions.https.onCall(
-// async (p, c) => {
-//     try {
-//         if(!c.auth || !c.auth.uid)
-//         throw { msg: 'Please re-authenticate.'};
-        
-//         
-        
-//         const kid = p.kid || p.id;
-        
-//         const eA = await stripe.accounts.createExternalAccount(
-//             p.accountId,
-//             {external_account: p.external_account.id}
-//         )
-        
-//         await add(`kitchens/${kid}/externalaccounts`, p.external_account)
-        
-//         if(p.primary == true){
-//             await update('kitchens', kid, {external_account: p.external_account.id})
-//         }
-        
-//         return eA;
-//         // return p;
-//     } catch (e) {
-//         throw e;
-//     }    
-// });
-
-
-
-
-
-
-
-
-
-
-// export const kitchenExternalAccountUpdate = functions.https.onCall(
-// async (p, c) => {
-//     try {
-//         if(!c.auth || !c.auth.uid)
-//         throw { msg: 'Please re-authenticate.'};
-        
-//         
-
-//         const kid = p.kid || p.id;
-//         const eA = await stripe.accounts.updateExternalAccount(
-//             p.accountId,
-//             p.external_account.id,
-//             {metadata: {}}
-//         )
-//         await add(`kitchens/${kid}/externalaccounts`, p.external_account)
-//         if(p.primary == true){
-//             await update('kitchens', kid, {external_account: p.external_account.id})
-//         }
-//         return eA;
-//         // return p;
-//     } catch (e) {
-//         throw e;
-//     }    
-// });
-
-
-
-
-
-
-
-
-
-
-///// ITEMS /////
-
-
-
-
-
-
-
-
-
-
-export const itemAdd = functions.https.onCall(
-async (p, c) => {
-    if(!c.auth)
-    throw { msg: 'Please re-authenticate.'};
-    const i: any = p;
-    i.uid = c.auth.uid;
-    return add(`kitchens/${p.kid}/items`, i);
-});
-
-
-
-
-
-
-
-
-
-
-export const itemUpdate = functions.https.onCall(
-async (p, c) => {
-    if(!c.auth)
-    throw { msg: 'Please re-authenticate.'};
-    const id: any = p.iid || p.id || p;
-    return update(`kitchens/${p.kid}/items`, id, p);    
-});
-
-
-
-
-
-
-
-
-
-
-export const itemDelete = functions.https.onCall(
-async (p, c) => {
-    if(!c.auth)
-    throw { msg: 'Please re-authenticate.'};
-    const id: any = p.iid || p.id || p;
-    return del(`kitchens/${p.kid}/items`, id);    
-});
-
-
-
-
-
-
-
-
-
-
-///// HELPER FUNCTIONS: FIREBASE /////
-
-
-
-
-
-
-
-
-
-
-const docGet = (r:string) => {    
-    return db.doc(r).get();
-}
-
-
-
-
-
-
-
-
-
-
-const docSet = (r:string, data:any) => {    
-    return db.doc(r).set(data);
-}
-
-
-
-
-
-
-
-
-
-
-const add = (r:string, data:any) => {    
-    return db.collection(r).add(data);
-}
-
-
-
-
-
-
-
-
-
-
-const update = (r:string, d:string, data:any) => {    
-    return db.collection(r).doc(d).update(data);
-}
-
-
-
-
-
-
-
-
-
-
-const del = (r: string, id: string) => {
-    return db.collection(r).doc(id).delete()
-}
 
 
 
@@ -869,6 +508,636 @@ const userAdd = (d:string, data:any) => {
 
 
 
+
+///// HELPER FUNCTIONS: STRIPE - USER /////
+
+
+
+
+
+
+
+
+
+
+const stripeCustomerCreatedId = async (user: User) => {
+    
+    const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: {uid: user.uid} 
+    })
+    return customer.id
+}
+
+
+
+
+
+
+
+
+
+
+const stripeCustomerDelete = (cid: string) => {        
+    
+    return stripe.customers.del(cid);
+}
+
+
+
+
+
+
+
+
+
+
+const stripeCustomersListSources = async (cid: string) => {
+    
+    return await stripe.customers.listSources(
+        cid,
+        {object: 'source'}
+    );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///// KITCHENS /////
+
+
+
+
+
+
+
+
+
+
+export const kitchenCreate = functions.https.onCall(
+async (p, c) => {
+    if(!c.auth)
+    throw { msg: 'Please re-authenticate.'};
+    // return p;
+    const k: any = p; k.address = {};
+    k.uid = c.auth.uid;
+    let ki = await docGet(`kitchens/${k.uid}`);
+    if(ki.exists) return ki.data();
+    k.accountId = await stripeAccountCreatedId(k, c.rawRequest.ip);
+    // return add('kitchens', k);
+    return docSet(`kitchens/${k.uid}`, k)
+});
+
+
+
+
+
+
+
+
+
+
+export const kitchenUpdate = functions.https.onCall(
+async (p, c) => {
+    if(!c.auth)
+    throw { msg: 'Please re-authenticate.'};
+    const id: any = p.kid || p.id;
+    return update('kitchens', id, p);
+});
+
+
+
+
+
+
+
+
+
+
+export const kitchenAccountRetrieve = functions.https.onCall(
+async (p, c) => {
+    if(!c.auth)
+    throw { msg: 'Please re-authenticate.'};
+    return await stripe.accounts.retrieve(p.id||p.accountId||p);
+});
+
+
+
+
+
+
+
+
+
+
+export const kitchenAccountUpdate = functions.https.onCall(
+async (p, c) => {
+    if(!c.auth)
+    throw { msg: 'Please re-authenticate.'};
+    if(!p.data || !p.data.individual || !p.data.company)
+    throw { msg: 'Missing entity data.'};
+    p.data.individual.verification = undefined;
+    return await stripe.accounts.update(p.id, p.data);
+});
+
+
+
+
+
+
+
+
+
+
+export const kitchenAccountIdentityDocuments = functions.storage.bucket('ts-felixo-verification').object().onFinalize(
+async (object) => {
+    const contentType = object.contentType || '';
+
+    if (!contentType.startsWith('image/'))
+        return console.log('This is not an image.');
+
+    const filePath = object.name || '';
+    const meta = object.metadata || {}; // Get AccountId...
+
+    if(!meta.accountId)
+        return console.log("No id");
+
+    const d: any = {
+        name: path.basename(filePath)||'',
+        path: filePath,
+        purpose: 'identity_document',
+        bucket: 'ts-felixo-verification',
+        accountId: meta.accountId
+    };
+
+    const file = await stripeFileCreatedId(d);
+
+    console.log(file); // Add update impl...
+});
+
+
+
+
+
+
+
+
+
+
+// export const kitchenDelete = functions.https.onCall(
+// async (p, c) => {
+//     const id: any = p.kid || p.id || p;
+//     return del('kitchens', id);    
+// });
+
+
+
+
+
+
+
+
+
+
+// export const kitchenRecords = functions.https.onCall(
+// async (p, c) => {
+//     const id: any = p.kid || p.id;
+//     stripe.accounts.retrieve(p.accountId,)
+//     return update('kitchens', id, p);    
+// });
+
+
+
+
+
+
+
+
+
+
+// export const kitchenExternalAccountAdd = functions.https.onCall(
+// async (p, c) => {
+//     try {
+//         if(!c.auth || !c.auth.uid)
+//         throw { msg: 'Please re-authenticate.'};
+        
+//         
+        
+//         const kid = p.kid || p.id;
+        
+//         const eA = await stripe.accounts.createExternalAccount(
+//             p.accountId,
+//             {external_account: p.external_account.id}
+//         )
+        
+//         await add(`kitchens/${kid}/externalaccounts`, p.external_account)
+        
+//         if(p.primary == true){
+//             await update('kitchens', kid, {external_account: p.external_account.id})
+//         }
+        
+//         return eA;
+//         // return p;
+//     } catch (e) {
+//         throw e;
+//     }    
+// });
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+// export const kitchenExternalAccountUpdate = functions.https.onCall(
+// async (p, c) => {
+//     try {
+//         if(!c.auth || !c.auth.uid)
+//         throw { msg: 'Please re-authenticate.'};
+        
+//         
+
+//         const kid = p.kid || p.id;
+//         const eA = await stripe.accounts.updateExternalAccount(
+//             p.accountId,
+//             p.external_account.id,
+//             {metadata: {}}
+//         )
+//         await add(`kitchens/${kid}/externalaccounts`, p.external_account)
+//         if(p.primary == true){
+//             await update('kitchens', kid, {external_account: p.external_account.id})
+//         }
+//         return eA;
+//         // return p;
+//     } catch (e) {
+//         throw e;
+//     }    
+// });
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    ///// ITEMS /////
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+export const itemAdd = functions.https.onCall(
+    async (p, c) => {
+        if(!c.auth)
+        throw { msg: 'Please re-authenticate.'};
+        const i: any = p;
+        i.uid = c.auth.uid;
+        return add(`kitchens/${p.kid}/items`, i);
+    }
+);
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+export const itemUpdate = functions.https.onCall(
+    async (p, c) => {
+        if(!c.auth)
+        throw { msg: 'Please re-authenticate.'};
+        const id: any = p.iid || p.id || p;
+        return update(`kitchens/${p.kid}/items`, id, p);    
+    }
+);
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+export const itemDelete = functions.https.onCall(
+    async (p, c) => {
+        if(!c.auth)
+        throw { msg: 'Please re-authenticate.'};
+        const id: any = p.iid || p.id || p;
+        return del(`kitchens/${p.kid}/items`, id);    
+    }
+);
+
+
+
+
+
+
+
+
+
+
+///// HELPER FUNCTIONS: FIREBASE /////
+
+
+
+
+
+
+
+
+
+
+const docGet = (r:string) => {    
+    return db.doc(r).get();
+}
+
+
+
+
+
+
+
+
+
+
+const docSet = (r:string, data:any) => {    
+    return db.doc(r).set(data);
+}
+
+
+
+
+
+
+
+
+
+
+const add = (r:string, data:any) => {    
+    return db.collection(r).add(data);
+}
+
+
+
+
+
+
+
+
+
+
+const update = (r:string, d:string, data:any) => {    
+    return db.collection(r).doc(d).update(data);
+}
+
+
+
+
+
+
+
+
+
+
+const del = (r: string, id: string) => {
+    return db.collection(r).doc(id).delete()
+}
+
+
+
+
+
+
+
+
+
+
 ///// HELPER FUNCTIONS: STRIPE /////
 
 
@@ -882,6 +1151,8 @@ const userAdd = (d:string, data:any) => {
 
 const stripeAccountCreatedId = async (k: any, ip?: any) => {
 
+    const bp = k.business_profile;
+
     const account = await stripe.accounts.create({
         type: 'custom',
         country: k.address.country || 'US',
@@ -893,8 +1164,12 @@ const stripeAccountCreatedId = async (k: any, ip?: any) => {
         ...(k.business_type)?{
             business_type: k.business_type
         }:null,
+        ...(k.business_profile)?{ business_profile: {
+          mcc: (bp)?(bp.mcc||'5499'):'5499',
+          url: k.business_profile.url||`https://homefryapp.com/kitchen?=${k.id}`,
+        } }:null,
         ...(k.business_type == "individual")?{ individual: {
-            first_name: k.name,
+            first_name: k.first_name||k.name,
             last_name: k.last_name,
             address: k.address,
             dob: k.dob,
@@ -949,60 +1224,13 @@ const stripeFileCreatedId = async (d: any) => {
             type: 'application/octet-stream'
         },
         purpose: d.purpose
-    });
+    }, {...(d.accountId)?{
+        stripe_account: d.accountId
+    }:null});
 
     fs.unlinkSync(tempFilePath);
     
     return file.id;
-}
-
-
-
-
-
-
-
-
-
-
-const stripeCustomerCreatedId = async (user: User) => {
-    
-    const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: {uid: user.uid} 
-    })
-    return customer.id
-}
-
-
-
-
-
-
-
-
-
-
-const stripeCustomerDelete = (cid: string) => {        
-    
-    return stripe.customers.del(cid);
-}
-
-
-
-
-
-
-
-
-
-
-const stripeCustomersListSources = async (cid: string) => {
-    
-    return await stripe.customers.listSources(
-        cid,
-        {object: 'source'}
-    );
 }
 
 
