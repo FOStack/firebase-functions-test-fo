@@ -4,47 +4,13 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 
-import * as admin from 'firebase-admin';
-admin.initializeApp();
-const db = admin.firestore();
-const storage = admin.storage();
-
-import * as Stripe from 'stripe';
-const stripe = new Stripe(functions.config().stripe.homefry);
+import { db, storage, message } from './modules/admin';
+import { stripe } from './modules/stripe';
 
 // Interfaces
 
-interface User {
-    createdAt?: string;
-    customerId?: any;
-    disabled?: boolean;
-    displayName?: string;
-    email?: string;
-    emailVerified?: boolean;
-    notifications?: object;
-    photoURL?: string;
-    source?: string;
-    token?: string;
-    uid: string;
-}
-
-export interface Kitchen {
-    accountId?: string;
-    address?: {};
-    createdAt?: string;
-    disabled?: boolean;
-    name?: string;
-    email?: string;
-    emailVerified?: boolean;
-    identitySet?: boolean;
-    identityVerified?: boolean;
-    id?: string;
-    kid?: string;
-    payoutSet?: boolean;
-    photoURL?: string;
-    service?: {};
-    uid?: string;
-}
+import { User } from './models/user';
+// import { Kitchen } from './models/kitchen';
 
 
 
@@ -360,7 +326,7 @@ export const userChargeCreate = functions.https.onCall(
                     sound: 'default'
                 } 
             };
-            await admin.messaging().sendToDevice(user.token, payload);
+            await message.sendToDevice(user.token, payload);
         }
 
         return order;
