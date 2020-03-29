@@ -12,6 +12,8 @@ import { stripe } from './modules/stripe';
 import { User } from './models/user';
 // import { Kitchen } from './models/kitchen';
 
+export * from './modules/postmates/functions';
+
 
 
 
