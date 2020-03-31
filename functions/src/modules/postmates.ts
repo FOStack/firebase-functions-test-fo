@@ -27,19 +27,3 @@ export const create = (delivery:any) => {
         body: delivery
     });
 }
-
-export const quoteGet = functions.https.onCall(
-    async (p, c) => { 
-        const r = await quote(p);
-        // console.log(quote);
-        return r;
-    }
-);
-
-export const deliveryCreate = functions.https.onCall(
-    async (p, c) => { 
-        const delivery = await create(p);
-        // console.log(delivery);
-        return delivery;
-    }
-);
