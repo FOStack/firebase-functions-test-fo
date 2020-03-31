@@ -10,12 +10,11 @@ export const order = functions.https.onCall(
         if(!c.auth || !c.auth.uid)
         throw { msg: 'Please re-authenticate.'};
         
-        const user: any = await userDoc(c.auth.uid);
+        const user = await userDoc(c.auth.uid);
         
         const charge = await paymentIntentsCreate(p, user);
 
-        if(!charge.status)
-        throw {
+        if(!charge.status) throw {
             msg: 'Charge did not go through.'
         }
             
