@@ -4,7 +4,8 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 
-import { db, storage, message } from './modules/admin';
+import { prim } from './modules/utl';
+import { db, storage, message, userDoc, add } from './modules/admin';
 import { stripe } from './modules/stripe';
 
 // Interfaces
@@ -422,20 +423,6 @@ const notificationsObject = () => {
         name: 'Promotions',
       }
     };
-}
-
-
-
-
-
-
-
-
-
-
-const userDoc = async (uid: string) => {
-    let user = await db.collection('users').doc(uid).get()
-    return user.data()
 }
 
 
@@ -1067,19 +1054,6 @@ const docSet = (r:string, data:any) => {
 
 
 
-const add = (r:string, data:any) => {    
-    return db.collection(r).add(data);
-}
-
-
-
-
-
-
-
-
-
-
 const update = (r:string, d:string, data:any) => {    
     return db.collection(r).doc(d).update(data);
 }
@@ -1228,27 +1202,6 @@ const noNull = (obj: any) => {
       if (obj[key] && typeof obj[key] === "object") {
         newObj[key] = noNull(obj[key]); // recurse
       } else if (obj[key] !== null) {
-        newObj[key] = obj[key]; // copy value
-      }
-    });
-  
-    return newObj;
-};
-
-
-
-
-
-
-
-
-
-
-const prim = (obj: any) => {
-    const newObj: any = {};
-  
-    Object.keys(obj).forEach(key => {
-      if (obj[key] && typeof obj[key] !== "object" && obj[key] !== null) {
         newObj[key] = obj[key]; // copy value
       }
     });
