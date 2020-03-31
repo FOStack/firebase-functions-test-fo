@@ -8,11 +8,11 @@ import { db, storage, message } from './modules/admin';
 import { stripe } from './modules/stripe';
 
 // Interfaces
-
 import { User } from './models/user';
-// import { Kitchen } from './models/kitchen';
 
-export * from './modules/postmates/functions';
+// Functions
+export * as postmates from './modules/postmates';
+export * as process from './functions/process';
 
 
 
