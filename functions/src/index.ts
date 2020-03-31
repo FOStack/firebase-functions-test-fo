@@ -4,9 +4,8 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 
-import { prim } from './modules/utl';
-import { db, storage, userDoc, add, notify } from './modules/admin';
-import { stripe, paymentIntentsCreate } from './modules/stripe';
+import { db, storage, userDoc, add } from './modules/admin';
+import { stripe } from './modules/stripe';
 
 // Interfaces
 import { User } from './models/user';
@@ -257,51 +256,7 @@ async (p, c) => { try {
     const list = await stripeCustomersListSources(user.customerId);
 
     return list;
-} catch (e) { throw e; }})
-
-
-
-
-
-
-
-
-
-
-export const userChargeCreate = functions.https.onCall(
-    async (p, c) => {
-        if(!c.auth || !c.auth.uid)
-        throw { msg: 'Please re-authenticate.'};
-        const user = await userDoc(c.auth.uid);
-        if(!user) throw { msg: 'No record for this user...'};
-        
-        if(p.amount < 1000)
-        throw {
-            msg: 'Amount is too low to complete order.'
-        };
-        if(!user.source) 
-        throw {
-            msg: 'Please add a card to process payment.'
-        };
-
-        const charge = await paymentIntentsCreate(p, user);
-
-        if(!charge.status) throw {
-            msg: 'Charge did not go through.'
-        }
-            
-        const order = {
-            charge: prim(charge),
-            ...p
-        };
-
-        await add('orders', order);
-
-        await notify(p, user);
-
-        return order;
-    }
-);
+} catch (e) { throw e; }});
 
 
 

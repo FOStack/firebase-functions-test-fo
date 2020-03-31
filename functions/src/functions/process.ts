@@ -12,11 +12,7 @@ export const order = functions.https.onCall(
         
         const user = await userDoc(c.auth.uid);
         
-        const charge = await paymentIntentsCreate(p, user);
-
-        if(!charge.status) throw {
-            msg: 'Charge did not go through.'
-        }
+        const charge = await paymentIntent(p, user);
             
         const order = o(charge, p);
 
@@ -54,6 +50,15 @@ const o = (charge:any, p:any) => {
 
 
 
+
+async function paymentIntent(p: any, user: FirebaseFirestore.DocumentData | undefined) {
+    const charge = await paymentIntentsCreate(p, user);
+    if (!charge.status)
+        throw {
+            msg: 'Charge did not go through.'
+        };
+    return charge;
+}
 
 const orderDelivery = (p:any, user:any) => {
     let delivery = {};
