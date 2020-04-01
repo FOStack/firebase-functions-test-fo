@@ -27,3 +27,20 @@ export const create = (delivery:any) => {
         body: delivery
     });
 }
+
+
+
+
+
+
+
+
+
+
+export const phoneParam = (n:any) => {
+    const last4 = n.slice(-4);
+    const mid3 = n.substring((n.length-7),(n.length-4));
+    const first3 = n.substring((n.length-10),(n.length-7));
+    const param = `${first3}-${mid3}-${last4}`;
+    return param;
+}

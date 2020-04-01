@@ -1,6 +1,6 @@
 import * as functions from 'firebase-functions';
 
-import { quote, create } from '../modules/postmates';
+import { quote, create, phoneParam } from '../modules/postmates';
 
 export const quoteGet = functions.https.onCall(
     async (p, c) => { 
@@ -12,7 +12,10 @@ export const quoteGet = functions.https.onCall(
 
 export const deliveryCreate = functions.https.onCall(
     async (p, c) => { 
-        const delivery = await create(p);
+        let params = p;
+        p.pickup_phone_number = phoneParam(p.pickup_phone_number);
+        p.dropoff_phone_number = phoneParam(p.dropoff_phone_number);
+        const delivery = await create(params);
         // console.log(delivery);
         return delivery;
     }
