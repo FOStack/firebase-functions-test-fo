@@ -2,10 +2,10 @@ import * as functions from 'firebase-functions';
 
 import { prim } from '../modules/utl';
 import { 
-//     add, 
-//     notify, 
+    add, 
     userDoc, 
     docGet
+//     notify, 
 } from '../modules/admin';
 import { paymentIntentsCreate } from '../modules/stripe';
 import { 
@@ -19,21 +19,23 @@ export const order = functions.https.onCall(
         if(!c.auth || !c.auth.uid)
         throw { msg: 'Please re-authenticate.'};
         
-        const user = await userDoc(c.auth.uid);
+        const user:any = await userDoc(c.auth.uid);
 
-        let order:any = await docGet('orders', p.orderId);
+        // let order:any = await docGet('orders', p.orderId);
 
-        const kitchen:any = await docGet('kitchens', order.kitchenId);
+        const kitchen:any = await docGet('kitchens', p.kitchenId);
         
         const quote = await quoteCheck({
             pickup: kitchen.address, 
             dropoff: p.customerAddress
         });
+
+        const amount = subTotal(p.items);
       
         const charge = await paymentIntent({
             accountId: kitchen.accountId, 
             deliveryFee: quote.fee,
-            amount: 1500
+            amount: amount
         }, user);
             
         const delivery = await orderDelivery({
@@ -44,34 +46,24 @@ export const order = functions.https.onCall(
             dropoff: p.customerAddress,
             dropoff_phone_number: p.customerPhone
         });
+        console.log(delivery);
         
-        order = o(order, charge);
+        const order = {
+            active: true,
+            status: "pending",
+            items: p.items,
+            uid: user.uid,
+            charge: prim(charge),
+            ...p
+        };
         
-        // await update(`orders/${p.orderID}`, order);
+        await add(`orders`, order);
 
         // await notify(p, user);
 
         return order;
-        console.log(delivery);
     }
 );
-
-
-
-
-
-
-
-
-
-
-const o = (order:any, charge:any) => {
-    return {
-        charge: prim(charge),
-        status: "pending",
-        ...o
-    };
-}
 
 
 
@@ -93,11 +85,21 @@ async function quoteCheck(p:any) {
 }
 
 const quoteParams = (pickup_address:any, dropoff_address:any) => {
-    let params = {      
+    let params = { 
         pickup_address: `${pickup_address.line1}, ${pickup_address.city}, ${pickup_address.state}`,
         dropoff_address: `${dropoff_address.line1}, ${dropoff_address.city}, ${dropoff_address.state}`
     };
     return params;
+}
+
+const subTotal = (items:Array<any>) => {
+    let [amount, count] = [0, 0];
+    for(let i of items){
+        count += (1*i.quantity);
+        amount += (1*i.quantity * i.price);
+    }
+    console.log(count);
+    return amount;
 }
 
 async function paymentIntent(p: any, user: FirebaseFirestore.DocumentData | undefined) {
