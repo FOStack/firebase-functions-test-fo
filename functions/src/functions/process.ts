@@ -54,7 +54,8 @@ export const order = functions.https.onCall(
             items: p.items,
             uid: user.uid,
             charge: prim(charge),
-            ...p
+            ...p,
+            ...delivery
         };
         
         await add(`orders`, order);
