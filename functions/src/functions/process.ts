@@ -26,8 +26,8 @@ export const order = functions.https.onCall(
         const kitchen:any = await docGet('kitchens', p.kitchenId);
         
         const quote = await quoteCheck({
-            pickup: kitchen.address, 
-            dropoff: p.customerAddress
+            pickup_address: kitchen.address, 
+            dropoff_address: p.customerAddress
         });
 
         const amount = subTotal(p.items);
@@ -40,10 +40,10 @@ export const order = functions.https.onCall(
             
         const delivery = await orderDelivery({
             pickup_name: kitchen.name,
-            pickup: kitchen.address, 
+            pickup_address: kitchen.address, 
             pickup_phone_number: kitchen.phone,
             // dropoff_name: user.displayName,
-            dropoff: p.customerAddress,
+            dropoff_address: p.customerAddress,
             dropoff_phone_number: p.customerPhone
         });
         console.log(delivery);
@@ -53,7 +53,7 @@ export const order = functions.https.onCall(
             status: "pending",
             items: p.items,
             uid: user.uid,
-            charge: prim(charge),
+            ...prim(charge),
             ...p,
             ...delivery
         };
@@ -76,7 +76,10 @@ export const order = functions.https.onCall(
 
 
 async function quoteCheck(p:any) {
-    let params = quoteParams(p.pickup, p.dropoff);
+    let params = quoteParams(
+        p.pickup_address, 
+        p.dropoff_address
+    );
     let result = await quote(params);
     if(!result)
     throw {
@@ -85,10 +88,10 @@ async function quoteCheck(p:any) {
     return result;
 }
 
-const quoteParams = (pickup_address:any, dropoff_address:any) => {
+const quoteParams = (pa:any, da:any) => {
     let params = { 
-        pickup_address: `${pickup_address.line1}, ${pickup_address.city}, ${pickup_address.state}`,
-        dropoff_address: `${dropoff_address.line1}, ${dropoff_address.city}, ${dropoff_address.state}`
+        pickup_address: `${pa.line1}, ${pa.city}, ${pa.state}`,
+        dropoff_address: `${da.line1}, ${da.city}, ${da.state}`
     };
     return params;
 }
@@ -120,11 +123,11 @@ const orderDelivery = (p:any) => {
 const deliveryParams = (p:any) => {
     let params = {
         manifest: p.manifest || "Food stuffs",
-        pickup_name: p.pickup_name || "Homefry Kitchen Partner",
+        pickup_name: `Homefry Kitchen: ${p.pickup_name||'Partner'}`,
         pickup_phone_number: phoneParam(p.pickup_phone_number),
         dropoff_name: p.dropoff_name || "Homefry Orderer",
         dropoff_phone_number: phoneParam(p.dropoff_phone_number),
-        ...quoteParams(p.pickup, p.dropoff),
+        ...quoteParams(p.pickup_address, p.dropoff_address),
     };
     return params;
 }
