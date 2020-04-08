@@ -11,6 +11,7 @@ import { stripe } from './modules/stripe';
 import { User } from './models/user';
 
 // Functions
+export * as kitchen from './functions/kitchen';
 export * as postmates from './functions/postmates';
 export * as process from './functions/process';
 

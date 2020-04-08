@@ -56,6 +56,27 @@ export const add = (r:string, data:any) => {
 
 
 
+export const col = (p:any) => {    
+    let ref = db.collection(p.ref);
+    if(Array.isArray(p)){
+        p.forEach((v:any) => {
+            ref.where(v.field, v.operator||v.op||'==', v.query);
+        });
+    } else {
+        ref.where(p.field, p.operator||p.op||'==', p.query);
+    }
+    return ref;
+}
+
+
+
+
+
+
+
+
+
+
 export const notify = async (p:any, user:any) => {
     let r = {};
     if(user.token && user.token != ""){
