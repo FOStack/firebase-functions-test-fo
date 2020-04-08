@@ -52,10 +52,11 @@ export const order = functions.https.onCall(
             active: true,
             status: "pending",
             items: p.items,
-            uid: user.uid,
-            ...prim(charge),
+            user: prim(user),
+            charge: prim(charge),
+            delivery: prim(delivery),
+            fee: quote.fee,
             ...p,
-            ...delivery
         };
         
         await add(`orders`, order);
