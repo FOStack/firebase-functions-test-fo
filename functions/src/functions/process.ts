@@ -42,7 +42,7 @@ export const order = functions.https.onCall(
             pickup_name: kitchen.name,
             pickup_address: kitchen.address, 
             pickup_phone_number: kitchen.phone,
-            // dropoff_name: user.displayName,
+            ...(user.displayName)?{dropoff_name: user.displayName}:null,
             dropoff_address: p.customerAddress,
             dropoff_phone_number: p.customerPhone
         });

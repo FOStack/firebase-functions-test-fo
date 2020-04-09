@@ -722,7 +722,7 @@ export const kitchenAccountUpdate = functions.https.onCall(
 async (p, c) => {
     if(!c.auth)
     throw { msg: 'Please re-authenticate.'};
-    if(!p.data || !p.data.individual || !p.data.company)
+    if(!p.data || (!p.data.individual && !p.data.company))
     throw { msg: 'Missing entity data.'};
     p.data.individual.verification = undefined;
     return await stripe.accounts.update(p.id, p.data);
