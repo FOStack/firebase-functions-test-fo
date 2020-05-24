@@ -7,7 +7,7 @@ import {
     docGet
 //     notify, 
 } from '../modules/admin';
-import { paymentIntentsCreate } from '../modules/stripe';
+import { paymentIntentsCreate/*, chargesCreate*/ } from '../modules/stripe';
 import { 
     quote, 
     phoneParam,
@@ -24,8 +24,9 @@ export const order = functions.https.onCall(
         // let order:any = await docGet('orders', p.orderId);
 
         const kitchen:any = await docGet('kitchens', p.kitchenId);
+        if(!kitchen) throw { msg: 'No kitchen record available' };
         
-        const quote = await quoteCheck({
+        const quoteObject = await quoteCheck({
             pickup_address: kitchen.address, 
             dropoff_address: p.customerAddress
         });
@@ -34,38 +35,80 @@ export const order = functions.https.onCall(
       
         const charge = await paymentIntent({
             accountId: kitchen.accountId, 
-            deliveryFee: quote.fee,
+            deliveryFee: quoteObject.fee,
             amount: amount
         }, user);
             
-        const delivery = await orderDelivery({
+        const deliveryObject = await orderDelivery({
             pickup_name: kitchen.name,
             pickup_address: kitchen.address, 
             pickup_phone_number: kitchen.phone,
             ...(user.displayName)?{dropoff_name: user.displayName}:null,
             dropoff_address: p.customerAddress,
-            dropoff_phone_number: p.customerPhone
+            dropoff_phone_number: p.customerPhone,
+            ...(quoteObject.id)?{quote_id: quoteObject.id}:null
         });
-        console.log(delivery);
+        console.log(deliveryObject);
         
-        const order = {
+        const orderObject = {
             active: true,
             status: "pending",
             items: p.items,
             user: prim(user),
             charge: prim(charge),
-            delivery: prim(delivery),
-            fee: quote.fee,
+            delivery: prim(deliveryObject),
+            fee: quoteObject.fee,
             ...p,
         };
         
-        await add(`orders`, order);
+        await add(`orders`, orderObject);
 
         // await notify(p, user);
 
-        return order;
+        return orderObject;
     }
 );
+
+
+
+export const delivery = functions.https.onCall(
+    async (p, c) => {
+        const quoteD = await quoteCheck({
+            pickup_address: p.pickup_address, 
+            dropoff_address: p.dropoff_address
+        });
+        console.log(quoteD); 
+        
+        // const amount = quoteD.fee + 150;
+        // console.log(amount);
+
+        // const charge = await chargesCreate({
+        //     amount: amount,
+        //     source: p.source,
+        //     ...(p.customer)?{customer: p.customer}:null,
+        //     ...(p.receipt_email)?{receipt_email: p.receipt_email}:null
+        // })
+        // console.log(charge);
+            
+        const deliveryO = await orderDelivery({
+            ...p,
+            ...(quoteD.id)?{quote_id: quoteD.id}:null
+        });
+        console.log(deliveryO);
+        
+        const processedOrder = {
+            active: true,
+            status: "pending",
+            ...(p.manifest)?{items: [{name: p.manifest}]}:null,
+            // charge: prim(charge),
+            delivery: prim(deliveryO)
+        };
+        
+        await add(`orders`, processedOrder);
+
+        return processedOrder;
+    }
+)
 
 
 
@@ -77,11 +120,11 @@ export const order = functions.https.onCall(
 
 
 async function quoteCheck(p:any) {
-    let params = quoteParams(
+    const params = quoteParams(
         p.pickup_address, 
         p.dropoff_address
     );
-    let result = await quote(params);
+    const result = await quote(params);
     if(!result)
     throw {
         msg: 'Delivery is currently unavailable in your area. Payment was not processed.'
@@ -90,16 +133,16 @@ async function quoteCheck(p:any) {
 }
 
 const quoteParams = (pa:any, da:any) => {
-    let params = { 
-        pickup_address: `${pa.line1}, ${pa.city}, ${pa.state}`,
-        dropoff_address: `${da.line1}, ${da.city}, ${da.state}`
+    const params = { 
+        pickup_address: (pa.line1)?`${pa.line1}, ${pa.city}, ${pa.state}`:pa,
+        dropoff_address: (da.line1)?`${da.line1}, ${da.city}, ${da.state}`:da
     };
     return params;
 }
 
 const subTotal = (items:Array<any>) => {
     let [amount, count] = [0, 0];
-    for(let i of items){
+    for(const i of items){
         count += (1*i.quantity);
         amount += (1*i.quantity * i.price);
     }
@@ -117,18 +160,23 @@ async function paymentIntent(p: any, user: FirebaseFirestore.DocumentData | unde
 }
 
 const orderDelivery = (p:any) => {
-    let delivery = deliveryParams(p);
-    return create(delivery);
+    const deliveryP = deliveryParams(p);
+    return create(deliveryP);
 }
 
 const deliveryParams = (p:any) => {
-    let params = {
+    const params = {
         manifest: p.manifest || "Food stuffs",
-        pickup_name: `Homefry Kitchen: ${p.pickup_name||'Partner'}`,
+        pickup_name: `Homefry - ${p.pickup_name||'Partner'}`,
         pickup_phone_number: phoneParam(p.pickup_phone_number),
         dropoff_name: p.dropoff_name || "Homefry Orderer",
         dropoff_phone_number: phoneParam(p.dropoff_phone_number),
         ...quoteParams(p.pickup_address, p.dropoff_address),
+        ...(p.pickup_business_name)?{pickup_business_name: p.pickup_business_name}:null,
+        ...(p.pickup_notes)?{pickup_notes: p.pickup_notes}:null,
+        ...(p.dropoff_business_name)?{dropoff_business_name: p.dropoff_business_name}:null,
+        ...(p.dropoff_notes)?{dropoff_notes: p.dropoff_notes}:null,
+        ...(p.quote_id)?{quote_id: p.quote_id}:null
     };
     return params;
 }

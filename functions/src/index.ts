@@ -4,7 +4,16 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 
-import { db, storage, userDoc, add } from './modules/admin';
+import { 
+    db, 
+    storage, 
+    userDoc, 
+    docGet, 
+    docSet, 
+    add,
+    update,
+    del
+} from './modules/admin';
 import { stripe } from './modules/stripe';
 
 // Interfaces
@@ -184,14 +193,14 @@ async (p, c) => { try {
     
     const user: any = (p.customerId)?{...c.auth,...p}:await userDoc(c.auth.uid);
     
-    let card: any = 
+    const card: any = 
     
     await stripe.customers.createSource(
         user.customerId,
         {source: p.source.id}
     )
     
-    if(card && p.primary == true){
+    if(card && p.primary === true){
         await update('users', user.uid, {source: p.source.id})
     } else { throw { msg: 'Adding the card was not successful.' } }
 
@@ -669,8 +678,12 @@ async (p, c) => {
     // return p;
     const k: any = p; k.address = {};
     k.uid = c.auth.uid;
-    let ki = await docGet(`kitchens/${k.uid}`);
-    if(ki.exists) return ki.data();
+
+    const ki = await docGet(`kitchens`, k.uid);
+    if(ki) return ki;
+
+    // k.id = docId();
+
     k.accountId = await stripeAccountCreatedId(k, c.rawRequest.ip);
     // return add('kitchens', k);
     return docSet(`kitchens/${k.uid}`, k)
@@ -742,13 +755,13 @@ async (object) => {
     const contentType = object.contentType || '';
 
     if (!contentType.startsWith('image/'))
-        return console.log('This is not an image.');
+        return 'This is not an image.';
 
     const filePath = object.name || '';
     const meta = object.metadata || {}; // Get AccountId...
 
     if(!meta.accountId)
-        return console.log("No id");
+        return "No id";
 
     const d: any = {
         name: path.basename(filePath)||'',
@@ -760,7 +773,7 @@ async (object) => {
 
     const file = await stripeFileCreatedId(d);
 
-    console.log(file); // Add update impl...
+    return file; // Add update impl...
 });
 
 
@@ -940,69 +953,6 @@ export const itemDelete = functions.https.onCall(
 
 
 
-///// HELPER FUNCTIONS: FIREBASE /////
-
-
-
-
-
-
-
-
-
-
-const docGet = (r:string) => {    
-    return db.doc(r).get();
-}
-
-
-
-
-
-
-
-
-
-
-const docSet = (r:string, data:any) => {    
-    return db.doc(r).set(data);
-}
-
-
-
-
-
-
-
-
-
-
-const update = (r:string, d:string, data:any) => {    
-    return db.collection(r).doc(d).update(data);
-}
-
-
-
-
-
-
-
-
-
-
-const del = (r: string, id: string) => {
-    return db.collection(r).doc(id).delete()
-}
-
-
-
-
-
-
-
-
-
-
 ///// HELPER FUNCTIONS: STRIPE /////
 
 
@@ -1020,6 +970,10 @@ const stripeAccountCreatedId = async (k: any, ip?: any) => {
 
     const account = await stripe.accounts.create({
         type: 'custom',
+        metadata: {
+            kid: k.id||k.uid,
+            uid: k.uid
+        },
         country: k.address.country || 'US',
         ...(k.email)?{email: k.email}:null,
         requested_capabilities: [
@@ -1033,7 +987,7 @@ const stripeAccountCreatedId = async (k: any, ip?: any) => {
           mcc: (bp)?(bp.mcc||'5499'):'5499',
           url: k.business_profile.url||`https://homefryapp.com/kitchen?=${k.id}`,
         } }:null,
-        ...(k.business_type == "individual")?{ individual: {
+        ...(k.business_type === "individual")?{ individual: {
             first_name: k.first_name||k.name,
             last_name: k.last_name,
             address: k.address,
@@ -1043,7 +997,7 @@ const stripeAccountCreatedId = async (k: any, ip?: any) => {
             ssn_last_4: k.ssn_last_4,
             verification: k.verification
         } }:null,
-        ...(k.business_type == "company")?{ company: {
+        ...(k.business_type === "company")?{ company: {
             name: k.name,
             address: k.address,
             directors_provided: false,
@@ -1080,9 +1034,9 @@ const stripeFileCreatedId = async (d: any) => {
         destination: tempFilePath
     });
 
-    let data = fs.readFileSync(tempFilePath);
+    const data = fs.readFileSync(tempFilePath);
 
-    let file = await stripe.files.create({
+    const file = await stripe.files.create({
         file: {
             data: data,
             name: d.name,
@@ -1097,40 +1051,6 @@ const stripeFileCreatedId = async (d: any) => {
     
     return file.id;
 }
-
-
-
-
-
-
-
-
-
-
-///////////////////////// HELPER FUNCTIONS /////////////////////////
-
-
-
-
-
-
-
-
-
-
-const noNull = (obj: any) => {
-    const newObj: any = {};
-  
-    Object.keys(obj).forEach(key => {
-      if (obj[key] && typeof obj[key] === "object") {
-        newObj[key] = noNull(obj[key]); // recurse
-      } else if (obj[key] !== null) {
-        newObj[key] = obj[key]; // copy value
-      }
-    });
-  
-    return newObj;
-};
 
 
 

@@ -12,7 +12,7 @@ export const quoteGet = functions.https.onCall(
 
 export const deliveryCreate = functions.https.onCall(
     async (p, c) => { 
-        let params = p;
+        const params = p;
         p.pickup_phone_number = phoneParam(p.pickup_phone_number);
         p.dropoff_phone_number = phoneParam(p.dropoff_phone_number);
         const delivery = await create(params);

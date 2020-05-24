@@ -37,3 +37,23 @@ export const paymentIntentsCreate = async (p:any, user:any) => {
     
     return paymentIntent; 
 }
+
+
+
+
+
+
+
+
+
+
+export const chargesCreate = async (p:any) => {
+    const charge = await stripe.charges.create({
+        currency: 'usd',
+        amount: p.amount,
+        ...(p.source)?{source: p.source}:null,
+        ...(p.customer)?{customer: p.customer}:null,
+        ...(p.receipt_email)?{receipt_email: p.receipt_email}:null
+    })
+    return charge
+}

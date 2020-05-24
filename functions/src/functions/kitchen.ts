@@ -9,3 +9,9 @@ export const orders = functions.https.onCall(
         query: p
     }).get();
 })
+
+export const authorized = functions.https.onRequest((req, res) => {
+    console.log(req.rawBody);
+    res.status(200);
+    res.send(req.rawBody);
+})
