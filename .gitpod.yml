@@ -1,0 +1,5 @@
+tasks:
+  - init: npm i -g firebase-tools
+    command: cd functions && npm i
+image:
+  file: .gitpod.Dockerfile
