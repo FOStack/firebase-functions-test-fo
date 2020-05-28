@@ -1,12 +1,9 @@
 import * as functions from 'firebase-functions';
 
 import * as path from 'path';
-import * as os from 'os';
-import * as fs from 'fs';
 
 import { 
     db, 
-    storage, 
     userDoc, 
     docGet, 
     docSet, 
@@ -14,7 +11,11 @@ import {
     update,
     del
 } from './modules/admin';
-import { stripe } from './modules/stripe';
+import { 
+    stripe, 
+    stripeAccountCreatedId, 
+    stripeFileCreatedId 
+} from './modules/stripe';
 
 // Interfaces
 import { User } from './models/user';
@@ -943,114 +944,6 @@ export const itemDelete = functions.https.onCall(
         return del(`kitchens/${p.kid}/items`, id);    
     }
 );
-
-
-
-
-
-
-
-
-
-
-///// HELPER FUNCTIONS: STRIPE /////
-
-
-
-
-
-
-
-
-
-
-const stripeAccountCreatedId = async (k: any, ip?: any) => {
-
-    const bp = k.business_profile;
-
-    const account = await stripe.accounts.create({
-        type: 'custom',
-        metadata: {
-            kid: k.id||k.uid,
-            uid: k.uid
-        },
-        country: k.address.country || 'US',
-        ...(k.email)?{email: k.email}:null,
-        requested_capabilities: [
-            'card_payments',
-            'transfers'
-        ],
-        ...(k.business_type)?{
-            business_type: k.business_type
-        }:null,
-        ...(k.business_profile)?{ business_profile: {
-          mcc: (bp)?(bp.mcc||'5499'):'5499',
-          url: k.business_profile.url||`https://homefryapp.com/kitchen?=${k.id}`,
-        } }:null,
-        ...(k.business_type === "individual")?{ individual: {
-            first_name: k.first_name||k.name,
-            last_name: k.last_name,
-            address: k.address,
-            dob: k.dob,
-            email: k.email,
-            phone: k.phone,
-            ssn_last_4: k.ssn_last_4,
-            verification: k.verification
-        } }:null,
-        ...(k.business_type === "company")?{ company: {
-            name: k.name,
-            address: k.address,
-            directors_provided: false,
-            owners_provided: k.owners_provided,
-            phone: k.phone,
-            tax_id: k.tax_id,
-            tax_id_registrar: k.tax_id_registrar,
-            vat_id: k.vat_id
-        } }:null,
-        ...(ip)?{ tos_acceptance: {
-            date: Math.floor(Date.now() / 1000),
-            ip: ip // Assumes you're not using a proxy
-        } }:null
-    })
-    return account.id
-}
-
-
-
-
-
-
-
-
-
-
-const stripeFileCreatedId = async (d: any) => {
-
-    const tempFilePath = path.join(os.tmpdir(), d.name);
-    
-    await storage.bucket(d.b||d.bucket||null)
-    .file(d.path||d.filePath)
-    .download({
-        destination: tempFilePath
-    });
-
-    const data = fs.readFileSync(tempFilePath);
-
-    const file = await stripe.files.create({
-        file: {
-            data: data,
-            name: d.name,
-            type: 'application/octet-stream'
-        },
-        purpose: d.purpose
-    }, {...(d.accountId)?{
-        stripe_account: d.accountId
-    }:null});
-
-    fs.unlinkSync(tempFilePath);
-    
-    return file.id;
-}
 
 
 
