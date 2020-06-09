@@ -24,6 +24,7 @@ import { User } from './models/user';
 export * as kitchen from './functions/kitchen';
 export * as postmates from './functions/postmates';
 export * as process from './functions/process';
+export * as go from './functions/go';
 
 
 
