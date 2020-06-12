@@ -139,6 +139,29 @@ export const col = (p:any) => {
 
 
 
+export const docs = async (p:any, i?:any) => {    
+    
+    let data: any;
+
+    const query = await col(p).get();
+
+    if(!query.empty) {
+        const snapshot = query.docs[i||0];
+        data = snapshot.data();
+    }
+
+    return (data)?data:undefined;
+}
+
+
+
+
+
+
+
+
+
+
 export const notify = async (p:any, user:any) => {
     let r = {};
     if(user.token && user.token !== ""){
