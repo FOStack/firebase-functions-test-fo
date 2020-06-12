@@ -139,6 +139,29 @@ export const col = (p:any) => {
 
 
 
+export const list = async (p:any) => {    
+    
+    let data: any;
+
+    const query = await col(p).get();
+
+    if(!query.empty) {
+        const snapshot = query;
+        data = snapshot.docChanges();
+    }
+
+    return (data)?data:undefined;
+}
+
+
+
+
+
+
+
+
+
+
 export const docs = async (p:any, i?:any) => {    
     
     let data: any;
