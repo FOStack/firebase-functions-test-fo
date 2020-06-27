@@ -146,8 +146,15 @@ export const list = async (p:any) => {
     const query = await col(p).get();
 
     if(!query.empty) {
-        const snapshot = query;
-        data = snapshot.docChanges();
+        const snapshot = query.docs;
+        data = [];
+        snapshot.forEach(d => {
+            let dt = d.data();
+            if(p.delete){
+                delete dt[p.delete];
+            }
+            data.push(dt);
+        });
     }
 
     return (data)?data:undefined;
@@ -171,6 +178,7 @@ export const docs = async (p:any, i?:any) => {
     if(!query.empty) {
         const snapshot = query.docs[i||0];
         data = snapshot.data();
+        data.id = snapshot.id;
     }
 
     return (data)?data:undefined;
@@ -185,18 +193,20 @@ export const docs = async (p:any, i?:any) => {
 
 
 
-export const notify = async (p:any, user:any) => {
-    let r = {};
-    if(user.token && user.token !== ""){
-        // Notification content
-        const payload = {
+
+
+export const sendMessage = async (p:any) => {
+    const payload = {
+        notification: {
+            title: p.title,
+            body: p.body,
+            sound: p.sound||'default'
+        },
+        webpush: {
             notification: {
-                title: 'Preparing Order',
-                body: `${p.seller.name} has recieved your order.`,
-                sound: 'default'
-            } 
-        };
-        r = await message.sendToDevice(user.token, payload);
-    }
-    return r;
+                vibrate: p.vibrate||[100,200,250,100]
+            }
+        }
+    };
+    return await message.sendToDevice(p.token, payload);
 }

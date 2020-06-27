@@ -7,65 +7,93 @@ import {
     docGet
 //     notify, 
 } from '../modules/admin';
-import { paymentIntentsCreate/*, chargesCreate*/ } from '../modules/stripe';
+// import { paymentIntentsCreate/*, chargesCreate*/ } from '../modules/stripe';
 import { 
     quote, 
     phoneParam,
     create 
 } from '../modules/postmates';
+// import { user } from 'firebase-functions/lib/providers/auth';
+
+export const doc = {
+    get: docGet,
+    user: userDoc
+}
+
+export const col = {
+    add: add
+}
+
+// export const order = functions.https.onCall(
+//     async (p, c) => {
+//         if(!c.auth || !c.auth.uid)
+//         throw { msg: 'Please re-authenticate.'};
+        
+//         const user:any = await userDoc(c.auth.uid);
+
+//         // let order:any = await docGet('orders', p.orderId);
+
+//         const kitchen:any = await docGet('kitchens', p.kitchenId);
+//         if(!kitchen) throw { msg: 'No kitchen record available' };
+        
+//         const quoteObject = await quoteCheck({
+//             pickup_address: kitchen.address, 
+//             dropoff_address: p.customerAddress
+//         });
+
+//         const amount = subTotal(p.items);
+      
+//         const charge = await paymentIntent({
+//             accountId: kitchen.accountId, 
+//             deliveryFee: quoteObject.fee,
+//             amount: amount
+//         }, user);
+            
+//         const deliveryObject = await orderDelivery({
+//             pickup_name: kitchen.name,
+//             pickup_address: kitchen.address, 
+//             pickup_phone_number: kitchen.phone,
+//             ...(user.displayName)?{dropoff_name: user.displayName}:null,
+//             dropoff_address: p.customerAddress,
+//             dropoff_phone_number: p.customerPhone,
+//             ...(quoteObject.id)?{quote_id: quoteObject.id}:null
+//         });
+//         console.log(deliveryObject);
+        
+//         const orderObject = {
+//             active: true,
+//             status: "pending",
+//             items: p.items,
+//             user: prim(user),
+//             charge: prim(charge),
+//             delivery: prim(deliveryObject),
+//             fee: quoteObject.fee,
+//             ...p,
+//         };
+        
+//         await add(`orders`, orderObject);
+
+//         // await notify(p, user);
+
+//         return orderObject;
+//     }
+// );
+
+
 
 export const order = functions.https.onCall(
-    async (p, c) => {
-        if(!c.auth || !c.auth.uid)
-        throw { msg: 'Please re-authenticate.'};
-        
-        const user:any = await userDoc(c.auth.uid);
-
-        // let order:any = await docGet('orders', p.orderId);
-
-        const kitchen:any = await docGet('kitchens', p.kitchenId);
-        if(!kitchen) throw { msg: 'No kitchen record available' };
-        
-        const quoteObject = await quoteCheck({
-            pickup_address: kitchen.address, 
-            dropoff_address: p.customerAddress
-        });
-
-        const amount = subTotal(p.items);
-      
-        const charge = await paymentIntent({
-            accountId: kitchen.accountId, 
-            deliveryFee: quoteObject.fee,
-            amount: amount
-        }, user);
-            
-        const deliveryObject = await orderDelivery({
-            pickup_name: kitchen.name,
-            pickup_address: kitchen.address, 
-            pickup_phone_number: kitchen.phone,
-            ...(user.displayName)?{dropoff_name: user.displayName}:null,
-            dropoff_address: p.customerAddress,
-            dropoff_phone_number: p.customerPhone,
-            ...(quoteObject.id)?{quote_id: quoteObject.id}:null
-        });
-        console.log(deliveryObject);
-        
-        const orderObject = {
-            active: true,
-            status: "pending",
-            items: p.items,
-            user: prim(user),
-            charge: prim(charge),
-            delivery: prim(deliveryObject),
-            fee: quoteObject.fee,
-            ...p,
-        };
-        
-        await add(`orders`, orderObject);
-
-        // await notify(p, user);
-
-        return orderObject;
+    async (p:any, c: any) => {
+        try {
+            const order = {
+                customer: await userDoc(c?.auth?.uid),
+                merchant: await docGet('merchants', p?.merchantId),
+                items: p.items,
+            }
+            console.log(subTotal(p.items));
+            return await col.add(`orders`, order);
+        } catch (e) {
+            throw e;
+        }
     }
 );
 
@@ -150,14 +178,14 @@ const subTotal = (items:Array<any>) => {
     return amount;
 }
 
-async function paymentIntent(p: any, user: FirebaseFirestore.DocumentData | undefined) {
-    const charge = await paymentIntentsCreate(p, user);
-    if (!charge.status)
-        throw {
-            msg: 'Charge did not go through.'
-        };
-    return charge;
-}
+// async function paymentIntent(p: any, user: FirebaseFirestore.DocumentData | undefined) {
+//     const charge = await paymentIntentsCreate(p, user);
+//     if (!charge.status)
+//         throw {
+//             msg: 'Charge did not go through.'
+//         };
+//     return charge;
+// }
 
 const orderDelivery = (p:any) => {
     const deliveryP = deliveryParams(p);
@@ -179,4 +207,30 @@ const deliveryParams = (p:any) => {
         ...(p.quote_id)?{quote_id: p.quote_id}:null
     };
     return params;
+}
+
+
+
+
+
+
+
+
+
+
+export const payout = async (payees:any, order:any) => {
+    try {
+        const pay: any = {};
+        
+        // const provider = order?.payment?.type;
+        // const commission = (provider != 'stripe')?
+
+        // pay?.[provider](payee);
+
+        return pay;
+
+    } catch(e) {
+        console.log(e);
+        
+    }
 }
