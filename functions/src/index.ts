@@ -19,7 +19,6 @@ import {
 // Functions
 export * as kitchen from './functions/kitchen';
 export * as process from './functions/process';
-export * as notify from './functions/notify';
 export * as go from './functions/go';
 export * as user from './functions/user';
 export * as merchant from './functions/merchant';

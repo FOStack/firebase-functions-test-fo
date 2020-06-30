@@ -1,11 +1,12 @@
-import * as functions from 'firebase-functions';
+import { env } from './../configs/environment';
+import { storage } from './admin';
+
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
-import { storage } from './admin';
 import * as Stripe from 'stripe';
 
-export const stripe = new Stripe(functions.config().stripe.homefry);
+export const stripe = new Stripe(env.stripe.secret);
 
 
 

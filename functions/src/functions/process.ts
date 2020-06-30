@@ -13,6 +13,7 @@ import {
     phoneParam,
     create 
 } from '../modules/postmates';
+import * as notification from '../services/notification';
 // import { user } from 'firebase-functions/lib/providers/auth';
 
 export const doc = {
@@ -136,7 +137,19 @@ export const delivery = functions.https.onCall(
 
         return processedOrder;
     }
-)
+);
+
+
+
+export const notifications = functions.firestore.document('orders/{orderId}').onCreate(
+    async (s:any, c:any) => {
+        try {
+            return await notification.messages(s.data());
+        } catch(e) {
+            throw e;
+        }
+    }
+);
 
 
 

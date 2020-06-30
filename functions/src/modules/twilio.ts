@@ -1,8 +1,8 @@
-const functions = require('firebase-functions');
+import { env } from './../configs/environment';
+const { sid, token, number } = env.twilio;
 
 const twilio = require('twilio');
 
-const { sid, token, number } = functions.config().twilio;
 
 const client = new twilio(sid, token);
 

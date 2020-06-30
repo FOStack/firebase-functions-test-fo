@@ -1,7 +1,8 @@
-import * as functions from 'firebase-functions';
+import { env } from './../configs/environment';
+
 const rp = require('request-promise');
-const key = Buffer.from(functions.config().postmates.key + ':').toString('base64');
-const customerId = functions.config().postmates.customerid;
+const key = Buffer.from(env.postmates.key + ':').toString('base64');
+const customerId = env.postmates.customerid;
 
 const headers = {
     'Authorization': `Basic ${key}`
