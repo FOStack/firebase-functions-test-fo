@@ -27,7 +27,7 @@ export const create = functions.auth.user().onCreate(
         try {
             const user: User = userObject(event);
             user.customerId = await stripeCustomerCreatedId(user)
-            return userAdd(user.uid, user)
+            return await userAdd(user.uid, user)
         } catch(e) {
             throw {msg: 'User creation unsuccessful.'}
         }
@@ -49,7 +49,7 @@ export const update = functions.https.onCall(
         throw { msg: 'Please re-authenticate.'};
         const user = c.auth;
         const data: User = (p)?p:{};
-        return admin.update('users', user.uid, data)
+        return await admin.update('users', user.uid, data)
     }
 );
 
@@ -279,8 +279,8 @@ const notificationsObject = () => {
 
 
 
-const userAdd = (d:string, data:any) => {    
-    return admin.db.doc(`users/${d}`).set(data);
+const userAdd = async (d:string, data:any) => {    
+    return await admin.db.doc(`users/${d}`).set(data);
 }
 
 
