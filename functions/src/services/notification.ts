@@ -44,7 +44,7 @@ export const queue = (order: any) => {
             }
     
             if(key == 'merchant'){
-                params.body = `${customer.name||'A customer'} has placed an order with you on HomeFry! Please review the order.`;
+                params.body = `A customer has placed an order with you on HomeFry! Please review the order.`;
             }
             
             const task = msg[provider](params);

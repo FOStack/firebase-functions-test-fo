@@ -1,13 +1,6 @@
 import * as functions from 'firebase-functions';
-import { 
-    db, 
-    userDoc,
-    update,
-    del
-} from './../modules/admin';
-import { 
-    stripe
-} from './../modules/stripe';
+import * as admin from './../modules/admin';
+import { stripe } from './../modules/stripe';
 
 // Interfaces
 import { User } from './../models/user';
@@ -50,13 +43,13 @@ export const create = functions.auth.user().onCreate(
 
 
 
-export const userUpdate = functions.https.onCall(
+export const update = functions.https.onCall(
     async (p, c) => {
         if(!c.auth)
         throw { msg: 'Please re-authenticate.'};
         const user = c.auth;
         const data: User = (p)?p:{};
-        return update('users', user.uid, data)
+        return admin.update('users', user.uid, data)
     }
 );
 
@@ -69,12 +62,12 @@ export const userUpdate = functions.https.onCall(
 
 
 
-export const userDelete = functions.auth.user().onDelete(
+export const remove = functions.auth.user().onDelete(
     async (event) => {
         try {
-            const user: any = await userDoc(event.uid);
+            const user: any = await admin.userDoc(event.uid);
             await stripeCustomerDelete(user.customerId);
-            const status = await del('users', event.uid);
+            const status = await admin.del('users', event.uid);
             return status;
         } catch(e) {
             throw {msg: 'User deletion unsuccessful.'};
@@ -111,7 +104,7 @@ async (p, c) => { try {
     
     // 
     
-    const user: any = (p.customerId)?{...c.auth,...p}:await userDoc(c.auth.uid);
+    const user: any = (p.customerId)?{...c.auth,...p}:await admin.userDoc(c.auth.uid);
     
     const card: any = 
     
@@ -121,7 +114,7 @@ async (p, c) => { try {
     )
     
     if(card && p.primary === true){
-        await update('users', user.uid, {source: p.source.id})
+        await admin.update('users', user.uid, {source: p.source.id})
     } else { throw { msg: 'Adding the card was not successful.' } }
 
     const list = {
@@ -147,7 +140,7 @@ async (p, c) => { try {
     if(!c.auth || !c.auth.uid)
     throw { msg: 'Please re-authenticate.'};
 
-    const user: any = await userDoc(c.auth.uid);
+    const user: any = await admin.userDoc(c.auth.uid);
     if(!user) throw { msg: 'No record for this user...'};
     
     
@@ -180,7 +173,7 @@ async (p, c) => { try {
     if(!c.auth || !c.auth.uid)
     throw { msg: 'Please re-authenticate.'};
 
-    const user: any = await userDoc(c.auth.uid);
+    const user: any = await admin.userDoc(c.auth.uid);
     if(!user) throw { msg: 'No record for this user...'};
 
     const list = await stripeCustomersListSources(user.customerId);
@@ -287,7 +280,7 @@ const notificationsObject = () => {
 
 
 const userAdd = (d:string, data:any) => {    
-    return db.doc(`users/${d}`).set(data);
+    return admin.db.doc(`users/${d}`).set(data);
 }
 
 
