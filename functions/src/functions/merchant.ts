@@ -12,8 +12,8 @@ async (p:any, c)=> {
 
     data.items = await list({
         ref: 'items',
-        field: 'mids',
-        op: 'array-contains',
+        field: 'mid',
+        op: '==',
         query: data.id
     });
 
