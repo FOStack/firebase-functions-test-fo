@@ -210,3 +210,17 @@ export const sendMessage = async (p:any) => {
     };
     return await message.sendToDevice(p.token, payload);
 }
+
+
+
+
+
+
+
+
+
+
+export const timestamp = (d?: any) => {
+    const stamp = admin.firestore.Timestamp;//[(d)?'fromDate':'now'];
+    return (d)?stamp.fromDate(d):stamp.now()
+}
